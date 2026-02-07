@@ -20,8 +20,17 @@ class SynapseUnmasker:
 
         try:
             with open(filename, "rb") as f:
-                header_size = struct.unpack('<Q', f.read(8))[0]
-                header = json.loads(f.read(header_size).decode('utf-8'))
+                header_size_data = f.read(8)
+                if not header_size_data or len(header_size_data) < 8:
+                    return None, "File is empty or corrupted (Invalid Synapse Header)."
+                
+                header_size = struct.unpack('<Q', header_size_data)[0]
+                
+                header_raw = f.read(header_size)
+                if len(header_raw) < header_size:
+                    return None, "File corrupted (Incomplete Header)."
+                
+                header = json.loads(header_raw.decode('utf-8'))
                 
                 meta = header["__metadata__"]
                 original_size = meta["payload_bytes"]
