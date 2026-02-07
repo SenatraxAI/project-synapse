@@ -55,6 +55,17 @@ python3 synapse_ollama.py
 
 ---
 
+## 🌐 Synapse Founder Portal (Web UI)
+The production-ready web dashboard for managing neural steganography at scale.
+- **Location:** `synapse-portal/`
+- **Stack:** Next.js 15, TypeScript, Vanilla CSS (Material 3).
+- **Features:** 
+    - Drag-and-drop Forge interface.
+    - Multi-tenant token generation.
+    - Model weight visualization (Coming Soon).
+
+---
+
 ## 🛡 Security & Hardening
 *   **Skeptical Verification:** The bridge verifies the embedded CRC32 checksum before unmasking. If the key is off by even one character, the integrity check fails, preventing leakage of gibberish.
 *   **Precision Buffer:** Synapse V1.1 uses a 6-decimal scaling factor to ensure stability across different CPU/GPU rounding architectures.
