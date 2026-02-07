@@ -1,34 +1,46 @@
 'use client';
 
 import { useState } from 'react';
+import { SynapseEngine } from '@/lib/SynapseEngine';
 
 export default function ForgePage() {
   const [payload, setPayload] = useState('');
   const [maskName, setMaskName] = useState('');
   const [passkey, setPasskey] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ token?: string, file?: string } | null>(null);
+  const [result, setResult] = useState<{ token?: string, file?: string, blob?: Blob } | null>(null);
 
   const handleForge = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/forge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload, maskName, passkey })
+      const engine = new SynapseEngine(passkey);
+      const { filename, buffer } = await engine.forge(payload, maskName);
+      
+      const blob = new Blob([buffer], { type: 'application/octet-stream' });
+      
+      // For Demo: Generate a token-like string from the passkey
+      const mockToken = "SYN-WEB-" + btoa(JSON.stringify({ pld: maskName, exp: Date.now() + 86400000 })).substring(0, 32);
+
+      setResult({
+        token: mockToken,
+        file: filename,
+        blob: blob
       });
-      const data = await response.json();
-      if (data.success) {
-        setResult({
-          token: data.token,
-          file: data.filename
-        });
-      }
     } catch (error) {
       console.error("Forge failed:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadFile = () => {
+    if (!result?.blob || !result?.file) return;
+    const url = window.URL.createObjectURL(result.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = result.file;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -66,10 +78,10 @@ export default function ForgePage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-outline">
+            <button className="btn btn-outline" onClick={downloadFile}>
               <span className="material-icons" style={{ fontSize: '18px' }}>download</span> Download .safetensors
             </button>
-            <button className="btn btn-outline">
+            <button className="btn btn-outline" onClick={() => { navigator.clipboard.writeText(result.token || ''); }}>
               <span className="material-icons" style={{ fontSize: '18px' }}>content_copy</span> Copy Token
             </button>
           </div>
