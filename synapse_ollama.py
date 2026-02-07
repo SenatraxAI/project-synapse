@@ -151,18 +151,20 @@ class SynapseUnmasker:
         
         try:
             # Force UTF-8 encoding for Windows stability
-            cmd = ["ollama", "run", model, prompt]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
+            # Pipe prompt to stdin instead of argument for better handling of long strings/Windows CLI limits
+            cmd = ["ollama", "run", model]
+            result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, check=True, encoding='utf-8')
             return result.stdout
         except Exception as e:
             # SKEPTIC: Maybe the user doesn't know their model names?
+            error_details = str(e)
             try:
                 models_list = subprocess.run(["ollama", "list"], capture_output=True, text=True).stdout
                 model_suggestion = f"\n\nYour available Ollama models:\n{models_list}"
             except:
                 model_suggestion = ""
             
-            return f"\033[1;31m[OLLAMA ERROR]\033[0m Ensure Ollama is running and model '{model}' is pulled.{model_suggestion}"
+            return f"\033[1;31m[OLLAMA ERROR]\033[0m {error_details}\nEnsure Ollama is running and model '{model}' is pulled.{model_suggestion}"
 
 def main():
     print("📟 \033[1;34mSynapse: Hardened Bridge\033[0m")
