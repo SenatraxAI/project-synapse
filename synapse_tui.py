@@ -23,7 +23,7 @@ class SynapseForge:
         random.shuffle(indices)
         return indices[:num_bits]
 
-    def forge(self, payload_data, mask_name):
+    def forge(self, payload_data, mask_name, original_filename=None):
         """
         Creates a hardened .safetensors mask.
         Includes CRC32 for integrity verification.
@@ -70,7 +70,8 @@ class SynapseForge:
             "__metadata__": {
                 "type": "synapse_v1_hardened",
                 "payload_bytes": len(raw_data), # Original size
-                "total_bytes": len(protected_payload) # Size with CRC
+                "total_bytes": len(protected_payload), # Size with CRC
+                "original_filename": original_filename # Metadata for reconstruction
             },
             "stealth_weights": {
                 "dtype": "F32",
@@ -147,7 +148,7 @@ def main():
             return
 
     forge = SynapseForge(key)
-    path = forge.forge(payload, mask)
+    path = forge.forge(payload, mask, original_filename=payload_input if os.path.isfile(payload_input) else "secret.txt")
     
     print(f"\n[+] Neural Mask Created: {path}")
     print("[+] Integrity: CRC32 checksum embedded.")

@@ -18,25 +18,26 @@ class SynapseUnmasker:
         filename = filename.strip().strip('"').strip("'")
         
         if not os.path.exists(filename):
-            return None, f"File missing: {filename}"
+            return None, None, f"File missing: {filename}"
 
         try:
             with open(filename, "rb") as f:
                 header_size_data = f.read(8)
                 if not header_size_data or len(header_size_data) < 8:
-                    return None, "File is empty or corrupted (Invalid Synapse Header)."
+                    return None, None, "File is empty or corrupted (Invalid Synapse Header)."
                 
                 header_size = struct.unpack('<Q', header_size_data)[0]
                 
                 header_raw = f.read(header_size)
                 if len(header_raw) < header_size:
-                    return None, "File corrupted (Incomplete Header)."
+                    return None, None, "File corrupted (Incomplete Header)."
                 
                 header = json.loads(header_raw.decode('utf-8'))
                 
                 meta = header["__metadata__"]
                 original_size = meta["payload_bytes"]
                 total_bytes = meta["total_bytes"]
+                original_filename = meta.get("original_filename", "extracted_file.bin")
                 
                 weight_shape = header["stealth_weights"]["shape"][0]
                 weight_data = f.read()
@@ -54,6 +55,7 @@ class SynapseUnmasker:
             bits = []
             for idx in target_indices:
                 val = weights[idx]
+                # Floating point skepticism: round to the nearest precision unit
                 scaled = int(round(val * PRECISION))
                 bits.append(scaled & 1)
                 
@@ -73,12 +75,12 @@ class SynapseUnmasker:
             calculated_checksum = zlib.crc32(extracted_payload) & 0xffffffff
             
             if calculated_checksum != stored_checksum:
-                return None, "INTEGRITY FAILURE: Data corruption or wrong passkey."
+                return None, None, "INTEGRITY FAILURE: Data corruption or wrong passkey."
             
-            return extracted_payload, None
+            return extracted_payload, original_filename, None
 
         except Exception as e:
-            return None, f"TECHNICAL ERROR: {str(e)}"
+            return None, None, f"TECHNICAL ERROR: {str(e)}"
 
     def run_ollama(self, model, payload, query):
         print(f"\n🚀 [Synapse] Injecting Ghost Context into {model}...")
@@ -97,7 +99,6 @@ class SynapseUnmasker:
         print("-" * 40)
         
         try:
-            # Use 'py' or 'python' based on platform, but here we call the ollama binary
             # Force UTF-8 encoding for Windows stability
             cmd = ["ollama", "run", model, prompt]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
@@ -130,24 +131,37 @@ def main():
         key = token_or_key
     
     unmasker = SynapseUnmasker(key)
-    payload, err = unmasker.unmask(file_path)
+    payload, original_filename, err = unmasker.unmask(file_path)
     
     if err:
         print(f"\n\033[1;31m[!] {err}\033[0m")
     else:
         print(f"\n\033[1;32m[+] SUCCESS:\033[0m Data verified and unmasked.")
         
-        choice = input("\nBridge to Ollama? (y/n): ").lower()
-        if choice == 'y':
+        print("\n[Actions]")
+        print("1. Bridge to Ollama (Ghost RAG)")
+        print("2. Reconstruct/Download Original File")
+        print("3. View as Text")
+        
+        choice = input("\nSelection [1-3]: ")
+        
+        if choice == '1':
             model = input("Ollama Model Name (e.g. llama3): ")
             query = input("Your Question: ")
             response = unmasker.run_ollama(model, payload, query)
             print(f"\n\033[1;36m[AI RESPONSE]\033[0m\n{response}")
-        else:
+            
+        elif choice == '2':
+            out_name = "reconstructed_" + os.path.basename(original_filename)
+            with open(out_name, "wb") as f:
+                f.write(payload)
+            print(f"\n\033[1;32m[+] File Reconstructed:\033[0m {out_name}")
+            
+        elif choice == '3':
             try:
-                print(f"GHOST DATA: {payload.decode('utf-8')}")
+                print(f"\n\033[1;34m[GHOST DATA]\033[0m\n{payload.decode('utf-8')}")
             except:
-                print(f"GHOST DATA (Binary): {len(payload)} bytes")
+                print("\n\033[1;31m[!]\033[0m Data is binary. Use 'Reconstruct' to view.")
 
 if __name__ == "__main__":
     main()
