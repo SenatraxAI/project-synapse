@@ -38,9 +38,11 @@ Hide your secret text inside a functional weight adapter.
 ```bash
 python3 synapse_tui.py
 ```
-1.  Enter your secret payload.
-2.  Define the public "Mask Name" (e.g., *Shakespearean Style*).
-3.  Set your cryptographic Passkey.
+1.  Enter your secret payload (text or file path).
+2.  Define the public "Mask Name".
+3.  **Authentication Choice:** 
+    *   **A. Manual Passkey:** Pick your own password.
+    *   **B. Neural Access Token:** Generates a high-entropy seed and a signed `SYN-` token.
 
 ### Step 2: Bridge to Ollama
 Talk to your secret knowledge using a local LLM.
@@ -48,7 +50,7 @@ Talk to your secret knowledge using a local LLM.
 python3 synapse_ollama.py
 ```
 1.  Path to your generated `.safetensors` file.
-2.  Your Passkey (Verification happens instantly).
+2.  **Passkey or SYN- Token:** The system automatically detects and verifies tokens.
 3.  Your query.
 
 ---
