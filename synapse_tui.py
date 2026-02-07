@@ -21,12 +21,16 @@ class SynapseForge:
         random.shuffle(indices)
         return indices[:num_bits]
 
-    def forge(self, payload_text, mask_name):
+    def forge(self, payload_data, mask_name):
         """
         Creates a hardened .safetensors mask.
         Includes CRC32 for integrity verification.
         """
-        raw_data = payload_text.encode('utf-8')
+        if isinstance(payload_data, str):
+            raw_data = payload_data.encode('utf-8')
+        else:
+            raw_data = payload_data
+            
         # Add CRC32 to the end of the payload for skepticism/verification
         checksum = zlib.crc32(raw_data) & 0xffffffff
         protected_payload = raw_data + struct.pack('<I', checksum)
@@ -91,14 +95,21 @@ def main():
     print("\n📟 \033[1;34mSynapse: Hardened Forge\033[0m")
     print("--------------------------------")
     
-    payload_input = input("\n\033[1;32m[1]\033[0m Secret Data (Text or File Path): ")
+    payload_input = input("\n\033[1;32m[1]\033[0m Secret Data (Text or File Path): ").strip().strip('"').strip("'")
     
     # Check if input is a valid file path
     if os.path.isfile(payload_input):
         try:
-            with open(payload_input, 'r', encoding='utf-8') as f:
-                payload = f.read()
-            print(f"[*] Loaded payload from file: {payload_input}")
+            # Check file extension
+            if payload_input.lower().endswith(('.xlsx', '.xls', '.pdf', '.docx')):
+                print(f"\033[1;33m[SKEPTIC ALERT]\033[0m Detected binary file. Project Synapse works best with TEXT/CSV for RAG.")
+                print(f"I will hide the raw binary, but Ollama might struggle to 'read' it.")
+                with open(payload_input, 'rb') as f:
+                    payload = f.read()
+            else:
+                with open(payload_input, 'r', encoding='utf-8', errors='ignore') as f:
+                    payload = f.read()
+            print(f"[*] Loaded {len(payload)} bytes from: {payload_input}")
         except Exception as e:
             print(f"\033[1;31m[!] Error reading file:\033[0m {e}")
             return
