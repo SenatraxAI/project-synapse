@@ -96,8 +96,9 @@ class SynapseUnmasker:
         
         try:
             # Use 'py' or 'python' based on platform, but here we call the ollama binary
+            # Force UTF-8 encoding for Windows stability
             cmd = ["ollama", "run", model, prompt]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
             return result.stdout
         except Exception as e:
             # SKEPTIC: Maybe the user doesn't know their model names?
